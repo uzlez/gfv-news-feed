@@ -23,6 +23,8 @@ KEYWORDS = {
     "GFV":                 '"GFV" ventures',
     "Justin Zeefee":       '"Justin Zeefee"',
     "Deborah Fairlamb":    '"Deborah Fairlamb"',
+    "Swarmer Inc":         '"Swarmer Inc"',
+    "SWMR":                '"SWMR" stock',
 }
 
 DAYS_LOOKBACK = 180
