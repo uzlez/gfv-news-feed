@@ -29,8 +29,8 @@ KEYWORDS = {
 
 DAYS_LOOKBACK = 180
 
-BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_FILE  = os.path.join(BASE_DIR, "data", "news_data.json")
+BASE_DIR    = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_FILE   = os.path.join(BASE_DIR, "data", "news_data.json")
 OUTPUT_HTML = os.path.join(BASE_DIR, "index.html")
 
 HEADERS = {
@@ -48,6 +48,8 @@ KEYWORD_COLORS = {
     "GFV":                 ("#dbeafe", "#1e3a8a"),   # blue
     "Justin Zeefee":       ("#fef3c7", "#92400e"),   # amber
     "Deborah Fairlamb":    ("#ede9fe", "#4c1d95"),   # violet
+    "Swarmer Inc":         ("#fee2e2", "#991b1b"),   # red
+    "SWMR":                ("#ffedd5", "#9a3412"),   # orange
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ def fetch_google_news_rss(query: str) -> list[dict]:
     )
     articles = []
     try:
-        req  = Request(url, headers=HEADERS)
+        req = Request(url, headers=HEADERS)
         with urlopen(req, timeout=20) as resp:
             xml_data = resp.read()
         root = ET.fromstring(xml_data)
@@ -80,11 +82,11 @@ def fetch_google_news_rss(query: str) -> list[dict]:
             pubdate_el = item.find("pubDate")
             source_el  = item.find("source")
 
-            title   = title_el.text.strip()   if title_el   is not None and title_el.text   else ""
-            link    = link_el.text.strip()     if link_el    is not None and link_el.text    else ""
-            desc    = desc_el.text             if desc_el    is not None and desc_el.text    else ""
-            pubdate = pubdate_el.text          if pubdate_el is not None and pubdate_el.text else ""
-            source  = source_el.text.strip()   if source_el  is not None and source_el.text  else ""
+            title   = title_el.text.strip()  if title_el   is not None and title_el.text   else ""
+            link    = link_el.text.strip()    if link_el    is not None and link_el.text    else ""
+            desc    = desc_el.text            if desc_el    is not None and desc_el.text    else ""
+            pubdate = pubdate_el.text         if pubdate_el is not None and pubdate_el.text else ""
+            source  = source_el.text.strip()  if source_el  is not None and source_el.text  else ""
 
             # Strip HTML from description
             desc = re.sub(r"<[^>]+>", "", desc).strip()
@@ -93,11 +95,11 @@ def fetch_google_news_rss(query: str) -> list[dict]:
 
             if title and link and iso_date:
                 articles.append({
-                    "title":   title,
-                    "link":    link,
+                    "title":       title,
+                    "link":        link,
                     "description": desc[:400],
                     "published":   iso_date,
-                    "source":  source,
+                    "source":      source,
                 })
     except (URLError, HTTPError, ET.ParseError) as exc:
         print(f"  ⚠️  Error fetching '{query}': {exc}", file=sys.stderr)
@@ -117,7 +119,7 @@ def save_data(articles: list[dict]) -> None:
         json.dump(articles, f, indent=2, ensure_ascii=False)
 
 
-def prune_old_articles(articles: list[dict], days: int = DAYSLOOKBACK) -> list[dict]:
+def prune_old_articles(articles: list[dict], days: int = DAYS_LOOKBACK) -> list[dict]:
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     kept = []
     for a in articles:
@@ -162,11 +164,11 @@ def format_date(iso: str) -> str:
 
 def article_html(article: dict, keyword: str) -> str:
     bg, fg = KEYWORD_COLORS.get(keyword, ("#f3f4f6", "#374151"))
-    title   = article["title"].replace('"', "&quot;").replace("<", "&lt;")
-    desc    = article.get("description", "").replace("<", "&lt;").replace('"', "&quot;")
-    source  = article.get("source", "Unknown")
-    pub     = format_date(article["published"])
-    link    = article["link"]
+    title  = article["title"].replace('"', "&quot;").replace("<", "&lt;")
+    desc   = article.get("description", "").replace("<", "&lt;").replace('"', "&quot;")
+    source = article.get("source", "Unknown")
+    pub    = format_date(article["published"])
+    link   = article["link"]
 
     return f"""
     <div class="article-card" data-keyword="{keyword}">
@@ -394,7 +396,7 @@ def generate_html(articles_by_keyword: dict[str, list[dict]], all_articles: list
 
 <header class="site-header">
   <div class="header-inner">
-    <h1>🟢	 GFV News Feed</h1>
+    <h1>🟢 GFV News Feed</h1>
     <p class="header-meta">
       {total} article{"s" if total != 1 else ""} from the last {DAYS_LOOKBACK} days
       &nbsp;·&nbsp; Updated {now_str}
@@ -412,11 +414,9 @@ def generate_html(articles_by_keyword: dict[str, list[dict]], all_articles: list
 
 <script>
   function filterBy(keyword, btn) {{
-    // Update active button
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     if (btn) btn.classList.add('active');
 
-    // Show/hide cards
     document.querySelectorAll('.article-card').forEach(card => {{
       if (keyword === 'all' || card.dataset.keyword === keyword) {{
         card.classList.remove('hidden');
