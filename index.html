@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GFV News Feed</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f9fafb;
+      --surface:  #ffffff;
+      --border:   #e5e7eb;
+      --text:     #111827;
+      --muted:    #6b7280;
+      --accent:   #059669;
+      --radius:   10px;
+      --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 24px 20px 18px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-inner {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .site-header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.3px;
+    }
+    .header-meta {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* ── Filters ── */
+    .filters {
+      max-width: 860px;
+      margin: 20px auto 0;
+      padding: 0 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .filter-btn {
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: .8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-btn.active {
+      background: var(--kw-bg, var(--accent));
+      color: var(--kw-fg, #fff);
+      border-color: transparent;
+    }
+    .filter-btn .count {
+      background: rgba(0,0,0,.08);
+      border-radius: 10px;
+      padding: 1px 6px;
+      font-size: .72rem;
+    }
+
+    /* ── Article grid ── */
+    .articles-container {
+      max-width: 860px;
+      margin: 22px auto 0;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    /* ── Card ── */
+    .article-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      transition: box-shadow .15s;
+    }
+    .article-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .article-card.hidden { display: none; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .badge {
+      font-size: .7rem;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 12px;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+    .pub-date {
+      font-size: .75rem;
+      color: var(--muted);
+    }
+
+    .article-title {
+      font-size: .95rem;
+      font-weight: 600;
+      line-height: 1.4;
+      margin-bottom: 7px;
+    }
+    .article-title a {
+      color: var(--text);
+      text-decoration: none;
+    }
+    .article-title a:hover { color: var(--accent); text-decoration: underline; }
+
+    .article-desc {
+      font-size: .83rem;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-footer {
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .source-name { font-weight: 500; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    /* ── Responsive ── */
+    @media (min-width: 600px) {
+      .articles-container { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <h1>🟢 GFV News Feed</h1>
+    <p class="header-meta">
+      68 articles from the last 180 days
+      &nbsp;·&nbsp; Updated March 18, 2026 at 10:00 UTC
+    </p>
+  </div>
+</header>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="filterBy('all', this)">All <span class="count">68</span></button>
+    <button class="filter-btn" onclick="filterBy('Green Flag Ventures', this)" style="--kw-bg:#d1fae5;--kw-fg:#065f46">Green Flag Ventures <span class="count">10</span></button>
+    <button class="filter-btn" onclick="filterBy('GFV', this)" style="--kw-bg:#dbeafe;--kw-fg:#1e3a8a">GFV <span class="count">0</span></button>
+    <button class="filter-btn" onclick="filterBy('Justin Zeefee', this)" style="--kw-bg:#fef3c7;--kw-fg:#92400e">Justin Zeefee <span class="count">0</span></button>
+    <button class="filter-btn" onclick="filterBy('Deborah Fairlamb', this)" style="--kw-bg:#ede9fe;--kw-fg:#4c1d95">Deborah Fairlamb <span class="count">0</span></button>
+    <button class="filter-btn" onclick="filterBy('Swarmer Inc', this)" style="--kw-bg:#fee2e2;--kw-fg:#991b1b">Swarmer Inc <span class="count">29</span></button>
+    <button class="filter-btn" onclick="filterBy('SWMR', this)" style="--kw-bg:#ffedd5;--kw-fg:#9a3412">SWMR <span class="count">29</span></button>
+
+</div>
+
+<div class="articles-container" id="articles-container">
+  
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiU0FVX3lxTE1PYkFDV29nc0lrc0h0Q1RQWkY4NmZMR2pmUzRESkdxcUV4dC1tOTRRUjJINWtrMldBaTBzeGxTd0tOYjlzblBZZ2hQV20xSEpZSXNz?oc=5" target="_blank" rel="noopener noreferrer">SWMR Stock Analysis Report | Financials & Insights - Benzinga Japan</a>
+      </h3>
+      <p class='article-desc'>SWMR Stock Analysis Report | Financials & Insights&nbsp;&nbsp;Benzinga Japan</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Benzinga Japan</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMixAFBVV95cUxOSFJDbjhHTzM0TGFPV19xSHVvWkJ6R3ZZNEd3RW5Fb3FvRUVhMVVDcmxVSlhyck5uYkZ3ZzJyRzB2aGRWSlcwd0d3cTlKb0hodUYzLUdNbXpKemxMWU05S3E1elpsYUp5OXZ3bXFjay1jWTF4bTNRaXhqeEpTVVphSFJrajFSQ184a1Y2cGcxdXU4TWl6UThUY2Z4T1VqT2lnbVlmMU4zVjQ0MmtWSkJEQW53X2RrbDVBMmpnaWFkZ1pDb2Fj?oc=5" target="_blank" rel="noopener noreferrer">Swarmer (SWMR) Is Trending Overnight After Rallying 520% — Here's What You Need To Know - Benzinga</a>
+      </h3>
+      <p class='article-desc'>Swarmer (SWMR) Is Trending Overnight After Rallying 520% — Here's What You Need To Know&nbsp;&nbsp;Benzinga</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Benzinga</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMihgFBVV95cUxOT0dBWV8ydmFHbDc1bEhJaUZXYVI3TkdEVklmOHRkZnV3UjdzeG1Uak1BY2FhTl9BbmlHSEJqbjM4Uk1KeUpwa2xIOXl3ZV9tczh2NVdQX0JBLVk2UEZYNjBVRmFRM0JNTjlOWllGZ1Z5eDRNV1VUYkZVMi1zNmIzU3k4MVJuUQ?oc=5" target="_blank" rel="noopener noreferrer">IPO Alert Swarmer SWMR - home.saxo</a>
+      </h3>
+      <p class='article-desc'>IPO Alert Swarmer SWMR&nbsp;&nbsp;home.saxo</p>
+      <div class="card-footer">
+        <span class="source-name">📰 home.saxo</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMirAFBVV95cUxNRjZ4M3didnJ4QUpUTUd1WUdnVUVzMzEtLWhLZmJtb3JBWGF5NjVfTGhyVHc3cV84cnFZWDJOX1dpWlZGa3Rrd1lxOFYyemJ3LVdhY1RtZnVhekZrbWhDV2xCbVZTT0duMlB2NWxuQVVQSHFEa0VVamM3M2N0aGV5RmtRMU9hS21rS2pfS0lha25wMUFSZk9aS3NVUElUd2JyNFJTX0VHTm9iYkhC?oc=5" target="_blank" rel="noopener noreferrer">Why SWMR Stock Soared Over 500% In Nasdaq Debut Today - Stocktwits</a>
+      </h3>
+      <p class='article-desc'>Why SWMR Stock Soared Over 500% In Nasdaq Debut Today&nbsp;&nbsp;Stocktwits</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Stocktwits</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMi5AFBVV95cUxNWHFQSEc3ekY1c0NraTA2WWRPZlFNLUQ3VlF5dExPdWM0akdZYnQyUTVFTC1yMEtfUGoxOFJ3QWxhUExPQWppUnlWMDNOYWlkd245WFNEZ3F5Smd2dXhtUEhoRmh2UmNRa1lmZGdxNDV4a2FOSXF6bU1kaXB1SFFSWWFXbm95SDRlUUJDZU5BcksyY2ZWWkZIM19kbkVCWldjd3F4VDdNV09JbnMwTW1MaDhfdHF2LS1vMHBjbVU1cnJacWNhMWlNLWxITV96VDdHa1JLM044cE9wWm5idzM5Wm95LWjSAeoBQVVfeXFMTU84T21ZVlB2V1hCUnNBM1FoZ2FQcTJmbENLdmtxRDhTNGVXTkRCZW9FOVAwMXlpOVhpUlFQU05tanB5VFZhdWpZc2RmcUxsbHluSmJMb3pvYV9mT3BzNzRLZ0dzU3FlMnl3M0N2NmpVeUVWMVVXeTFkQVRjN0lyMkJ4TW5LX0ExX2RlZDFGTmZCZjEzc2xPVWN2LWVJeGMtTkpkd0hDSnRIU3lOb1FDT1Q5Z2VGVVI4aFBobVFGY1JvMHp5MlB5RDZuR0lBSF92UmVzZmItQW5rdE5uX1VWN1AySGd6UzhSQm1n?oc=5" target="_blank" rel="noopener noreferrer">Swarmer Stock Rockets 520% In Nasdaq Debut: CEO Says Wars Fueling Massive Drone Demand Boom - Asianet Newsable</a>
+      </h3>
+      <p class='article-desc'>Swarmer Stock Rockets 520% In Nasdaq Debut: CEO Says Wars Fueling Massive Drone Demand Boom&nbsp;&nbsp;Asianet Newsable</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Asianet Newsable</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMixgFBVV95cUxNX0p5eEI5Z0ZMU0E1SFVWUTBzb3pmYzM2MTVhSXk4Y1l0SFJiZDFJVnRTa01TeTBrMVZIRWx0SHQzY0o1dXBGR0dXSkEtWWNUVEgwMkpBSHRabE5TSVR3SkdfQ0tDLTMzSEVLRUVnMmVfZl83Uk9mbjdsRHdpYl9IS1BlX21VVXMxaTI2UVNfNmRaTjVYQmRER1RUMHZaTFZQTFlWTkNiMlNCSWVxemZDTXRaUThmc0R3eUlhaXFjVFhsQ1BsYkE?oc=5" target="_blank" rel="noopener noreferrer">Swarmer Inc. IPO Skyrockets, Ignoring Deep Financial Losses - Whalesbook</a>
+      </h3>
+      <p class='article-desc'>Swarmer Inc. IPO Skyrockets, Ignoring Deep Financial Losses&nbsp;&nbsp;Whalesbook</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Whalesbook</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 18, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMi2gFBVV95cUxNcjFfYTdWeXJYeEU0MVRBSVVwWUg3YmUtWW9IWmdNWktDVmtyek9UcnE2N2JjNEhpZUU5YTRJal9sb3NheldRUTlwQ1owT2lOaXFtXzh2dEh6ek45UXRsZjJQYW14SVNPVnhBY3lzc194RnNXMFBLSFBpWF9zbTNvaHEzdGRiZmgyV3BJM18ydFRQYzNCVS1fa0cyQWlPalhMank3V2dFaDB4VkZsX3FnTlNZQzF6VF9ucUVJVjJqRVdvMzVCcW5KQ3AwbXhhaElTOXVoYnpnZnd0dw?oc=5" target="_blank" rel="noopener noreferrer">Swarmer, Lululemon, Oklo, Trade Desk And Rocket Lab: Why These 5 Stocks Are On Investors' Radars Today - Benzinga</a>
+      </h3>
+      <p class='article-desc'>Swarmer, Lululemon, Oklo, Trade Desk And Rocket Lab: Why These 5 Stocks Are On Investors' Radars Today&nbsp;&nbsp;Benzinga</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Benzinga</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMingFBVV95cUxNam1URHJlZnc1WUJva2czekc5UmdlZVRlY1hEemNoTUJjVDIxdHZRVUlLR1IxSjFSWGI3TUViSjcyeUpYbGVzODdMZ3BMZUc2RXYxMWNnZkVrZ0pRVVZSYlFRYk5ENEZQd3Y0V3J5c2dMbEhPSnJ3Z2s5ZzQzUXJDSUZzNmJyUXpMdkhkM1ZVUUdrdU9ieDRhdDFTeS0yZw?oc=5" target="_blank" rel="noopener noreferrer">AI drone software stock Swarmer (SWMR.US) surged 700% on its first day of trading. - 富途牛牛</a>
+      </h3>
+      <p class='article-desc'>AI drone software stock Swarmer (SWMR.US) surged 700% on its first day of trading.&nbsp;&nbsp;富途牛牛</p>
+      <div class="card-footer">
+        <span class="source-name">📰 富途牛牛</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMipAFBVV95cUxQdC1RbVdERWpCSDZaZHcyWkVZYjVOaWxZcVYzdWFHSkwxblJrWElXZVNTOS04Q3phLTdmSFNGOUV3UGFjU0FkS1VHUmJIek1KcldSaXJzSmxMMjFzaHpKVS1hdTV0YVp4RzFDcm5fcmlqckxtT21OR2RZcV9FMXFtQk1NdFhzZHZaa19MVUNPcUR4c1A4SFl2ZlVRTkFZamRmaW1lOA?oc=5" target="_blank" rel="noopener noreferrer">AI for investors - MLQ.ai</a>
+      </h3>
+      <p class='article-desc'>AI for investors&nbsp;&nbsp;MLQ.ai</p>
+      <div class="card-footer">
+        <span class="source-name">📰 MLQ.ai</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMivwFBVV95cUxQU3k3dkEtV2NsbGFla0hhaU1Md0dCaUMzbEtEdU9ldFVLVjNITDRuTldUenhEZkNDbVI5UFU1N0J0N005amF2bEo1ZDRGV0FxTEdkTTZIZEdULTFNMzRPdTE1MXJOanc5blFGMGhUbWlsRlNzeFZBZTh2bEdfZ0hNSTVTTE9UZ2NoajdGdnhtaGdZTVdCMDhHWEFzNzZwaXVITjZHQzZSU1JMVWp3UU1rZE5EQVJHTTh3N1pBMF9kOA?oc=5" target="_blank" rel="noopener noreferrer">Swarmer, Autonomous Drone Swarm Software, Files for NASDAQ IPO - TradingView</a>
+      </h3>
+      <p class='article-desc'>Swarmer, Autonomous Drone Swarm Software, Files for NASDAQ IPO&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMirwFBVV95cUxPZ3VBaDk1VXd0S1pwWGV5di1ZOFVPbXpreUVSaXlXT1BhNTBXY3ZGS0xPbWlfTklNNkRJN2tBS0VSdlh4ZkJFNm5kTWlUUkotTE01eHVZN0lhcEFYX1VIWVhqU1drYVAwMWNIUTA2S2ItUktmdUdrUzcxeGdrTVQxY3NBYndMR09rM2FUMXEyWTBiLVo5Q1cyWWRsUW5ybnZFekNEUUNwcmJ4WEx4QlpN?oc=5" target="_blank" rel="noopener noreferrer">AI Drone Software Stock Jumps 520% in Best IPO Since Newsmax - Bloomberg.com</a>
+      </h3>
+      <p class='article-desc'>AI Drone Software Stock Jumps 520% in Best IPO Since Newsmax&nbsp;&nbsp;Bloomberg.com</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Bloomberg.com</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMimAFBVV95cUxNWjNPVHkyUngtTV9PLWNDZEJ5WjY4TnRJS0J3c2tXQkhjTjBjSm1makxMNHdMNnFXbGNMcDYzU3hzakhzUXQyZnNEOHd5czZXNTlPVFllODkyOWFodFZsRzBiS1VZc19KRjktV2MtUXBnQURqUnpFeTJuZnVEOV9FYmVJSkhoLTBUTEdoYl9zT2VDSWU5anhBMg?oc=5" target="_blank" rel="noopener noreferrer">Swarmer stock soars 700% in blockbuster AI drone IPO debut - Invezz</a>
+      </h3>
+      <p class='article-desc'>Swarmer stock soars 700% in blockbuster AI drone IPO debut&nbsp;&nbsp;Invezz</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Invezz</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiiANBVV95cUxOWEhMMXlNcnF3UGNnXzJxSnZFMDV4ejQwU2NPYXYxME5PUDRPWnJzVW5iN1dHWWNkYlJqQy1XV3g2djRpSEFIemkyNnRUdEF3QTZlUUdTUXhjRjRhUFJkTld3VWdlWXgwQnMxV2NETFJfWXBaOThpdUxhU0VER2J4M3puZ2RKWDdCYjRzMVNCUHFJQVhGNFg5RFdJYWtMYVZuZE94MmpMXy0wb3VQUm52eTRZNWlrWVdFZllVNjdES0hGN0ZHOHBVNTlrU3B0Y0FQM2szYnVDREVabEo2V0xaWGEtM0o1YkxZc0U0QnA1cG5lYjhvMTdZZU9faGJoc29pYVN2QjFFNmhvRE9JNkR4cEtTUi1iQzJPTmxoN1J2aTM3Z3ZPQ19rLVIyRkMyU1BmdHdLbDFIYU9FU1BhZTBqQndJUkZnQmJTLUFfb2ctRkx4OGR5NDB6dURZcjZDRWZwOWcteURQZExlamh3VWk4cGxJTmZvVlA3M1dBbFctUFBMb0tzRHNPTQ?oc=5" target="_blank" rel="noopener noreferrer">Swarmer IPO: New Drone Technology Stock Soars 520% in Trading Debut - Barron's</a>
+      </h3>
+      <p class='article-desc'>Swarmer IPO: New Drone Technology Stock Soars 520% in Trading Debut&nbsp;&nbsp;Barron's</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Barron's</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiiANBVV95cUxOcGdkQlJVaThfWXgtX1FpS2hwblJRb0dzXzgxQkhFeVlmSkpSQjFpU015eFdtOUx3UUp6SjFWNHBwX1Bmb194cXA0ZXVnb05IZDFqWTlqLWR3SVpwdVM5cENJd1FtZ29UQ2hsWGQxak9fbjNKZ2t0eWV1cjlkZGV4aUQ3Y1N3NVBuSWxHMWRnUXVnWEhzeU9vLWE5Q2dxQnh1VzRzVjNiUmRlWmxxSkUwb2E2aUUta1ljUWhBUW5NX3N1Ty1Lcllyb2lGeVNMdnpudFRQeEVkNVF6WVNldlBJSUI3b09TRmpOcWNMRUZmbWlYLXlSbC01T3dLeHUwZTNHd1N6RkhRSDZxTk95aVNxSDRFLWlsUmo2YllWMjhHem54RmhjSkQ0MVQtY2UwTDlGMWVzQTlvMXZzTV9ibURkRDRVWnhzWWZXdTUwdnU3N3czRmpBeVhxNEE4WjE1TzhkYkZRc0pxLUhoNUQzQ2lvV1gtWnYzcWRxZlVHZlNXbXdhRVJURFhhZA?oc=5" target="_blank" rel="noopener noreferrer">Swarmer IPO: New Drone Technology Stock Soars 520% in Trading Debut - Barron's</a>
+      </h3>
+      <p class='article-desc'>Swarmer IPO: New Drone Technology Stock Soars 520% in Trading Debut&nbsp;&nbsp;Barron's</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Barron's</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiigFBVV95cUxOcjNIMkZZWHJ6X3ltUnJ0ZDBiTk9nRkViZkpSTC1BQ0YzaF9wOG1zMlo5WUFNYXZjaTVLb1JEb0VjQVZ2cFNZdHdzRGt6VExjNnZUTHg1YTZnX1hwS1BpMExDbUVhczUwRng4U21zRjR3WFQ0eTVYb1g0bzRONmFEcXdkb0xwRXFnRWc?oc=5" target="_blank" rel="noopener noreferrer">Swarmer, Inc - common stock (NQ: SWMR - The Chronicle-Journal</a>
+      </h3>
+      <p class='article-desc'>Swarmer, Inc - common stock (NQ: SWMR&nbsp;&nbsp;The Chronicle-Journal</p>
+      <div class="card-footer">
+        <span class="source-name">📰 The Chronicle-Journal</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiwwFBVV95cUxPdzgwWFcxcllGY213QXZoSGVKMUdtQVlhRmRIcWowRFdSbEhOUVRxQ0FJaDh5SUN2QjR6T1BmSVZjcWJWNEVNVFB0a2txZXZaeG5MbUZhbG9HNWNWMkJJYVdLNm5iWXAxSkFrbWgzeGxmTmt2c3p3REl1a0ZELTJpQ05LRW9majFoSEQtSzlnOEh6VXlIeTRaRW9JcEZfLWZqbmdhc2ZvWnc1Qlk1cHY1alp1RGdvT1pkeXZHeU9BdG93Mmc?oc=5" target="_blank" rel="noopener noreferrer">AI Drone Software Stock Jumps 700% in Best IPO Since Newsmax - Bloomberg.com</a>
+      </h3>
+      <p class='article-desc'>AI Drone Software Stock Jumps 700% in Best IPO Since Newsmax&nbsp;&nbsp;Bloomberg.com</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Bloomberg.com</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMifEFVX3lxTFAwUW5qNWFnbng4VnhTTGJNRFRrb0pBRVJHNXFFSHRnc1B1R1dWUU5wZ2xDV0tfM0tmS2RmNmNvdUlkeC1QemVNU0FJcnVuc3lJQlRzM1M3dkZLeElLb25kTkZwcF9DWHNSTHBrNUVTaUdWV0lHSmd5VEtUMzU?oc=5" target="_blank" rel="noopener noreferrer">Swarmer IPO Rises 700% Following Exec Edge Research Initiation - Yahoo Finance</a>
+      </h3>
+      <p class='article-desc'>Swarmer IPO Rises 700% Following Exec Edge Research Initiation&nbsp;&nbsp;Yahoo Finance</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Yahoo Finance</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiW0FVX3lxTE91Ry1QVmtvUl85dktfdG1uMGlPSzlMS3JpSG9TdHlMX1I0eFB0c21iYVZxek0tdWhTSFQ1b1ROSU0tbUNmT1B4cFJzU0I3djdoakw1RGJtaFNzTFU?oc=5" target="_blank" rel="noopener noreferrer">Swarmer Inc.'s Erik Prince highlights battle-tested tech - Fox Business</a>
+      </h3>
+      <p class='article-desc'>Swarmer Inc.'s Erik Prince highlights battle-tested tech&nbsp;&nbsp;Fox Business</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Fox Business</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiR0FVX3lxTE5pVEt3LUd5OGlvRUdIRVJjdV9hbGVqdUU3eEM0TkY5Z1NFUTFnd1FNS0tzTlE1T0tyeU9kLUlndzlIaGZYc3RR?oc=5" target="_blank" rel="noopener noreferrer">Swarmer (SWMR) Stock Rockets 250% on IPO Day as Drone Warfare Bets Pay Off Fast - MEXC</a>
+      </h3>
+      <p class='article-desc'>Swarmer (SWMR) Stock Rockets 250% on IPO Day as Drone Warfare Bets Pay Off Fast&nbsp;&nbsp;MEXC</p>
+      <div class="card-footer">
+        <span class="source-name">📰 MEXC</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMinwFBVV95cUxNRUtHdFd0TUVLVkpIekZZYk1FVEw1NVBrOFh4TFFVekx4Yk51Y2l3M2w3U1JmdElXdFBrdGI2V1lNcXFwaW15WnlGaDRGcEFiN0llT3R0c0MxbmhkVTNTVmFpZWhJc1Rtc0o4bFdjalBpc0lxaS02dHhzSUpycWJUOU5IdlFSaVRrTTFweGJYZ0dVRHJ1M2pKWnlLN0YwcW8?oc=5" target="_blank" rel="noopener noreferrer">Drone Maker Swarmer (SWMR) Sees Stock Surge Nearly 600% in Market Debut - TipRanks</a>
+      </h3>
+      <p class='article-desc'>Drone Maker Swarmer (SWMR) Sees Stock Surge Nearly 600% in Market Debut&nbsp;&nbsp;TipRanks</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TipRanks</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMia0FVX3lxTE5OMXkwOEtRTl9RZ1FiejJiOC1QTUlPenM2ejBhNEFBQzE3NExPQzZtb3BOTTRZNkVhTVo3SWxBSmRuclpLY2s2MmEtSzdyUHFaaF9xakhhbjNFeEhmSEhBcEZWOVZvZlZ6b1pz?oc=5" target="_blank" rel="noopener noreferrer">AI Investing Insights - Official Homepage - Intellectia AI™ - Intellectia AI</a>
+      </h3>
+      <p class='article-desc'>AI Investing Insights - Official Homepage - Intellectia AI™&nbsp;&nbsp;Intellectia AI</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Intellectia AI</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMizgFBVV95cUxNb0xXZUROSlpPT1ZJczVCa2RGcEgtX080SjBibXZaalpYeDJDN2JMaVVlczVkRnBHd0d0S1lwcWVCcnVUb2NhbHo5Ym1SWGZEaVk4T2FXMk9Zb0VpZ3VGVklhSDloYkV0clU3T2VsU0NxTERTQTRiN3NuSnFFZGJoZWl0TmhYMy1aT2ZxQTJxY3FVWnFpMkFJU0k5bGpKTkdfWEFwUDlFREtHWW5IR3hZVjcxcDRTc0llenNZalZYUWdzemo5SUlmbkVmWjZOdw?oc=5" target="_blank" rel="noopener noreferrer">IPO for drone-software company Swarmer opens at $12.50 after pricing at $5 - Investing.com</a>
+      </h3>
+      <p class='article-desc'>IPO for drone-software company Swarmer opens at $12.50 after pricing at $5&nbsp;&nbsp;Investing.com</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Investing.com</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiWEFVX3lxTE5mVlNLWXo5d2tEV1hYa2VsbFh5aVo4c2RiR2Q1M19xMmZSdlZNSUYxT21MX0taZXQwYWhSWUdMazZJS3R3Vk11bTJSTmhtTnoyVnBvdm1HQkw?oc=5" target="_blank" rel="noopener noreferrer">SWMR Earning Date, Earning Analysis and Earning Prediction - Intellectia AI</a>
+      </h3>
+      <p class='article-desc'>SWMR Earning Date, Earning Analysis and Earning Prediction&nbsp;&nbsp;Intellectia AI</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Intellectia AI</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiY0FVX3lxTE5fRFFmWWdzWkprMlNvbzEwRUwzSkFxcDduLXExTVViVl9XTTM4Tnl0NjhXeE1IUnVFSjdqWmh1RHowR0V2dXZIMnR3RC10MERVVHVYYmNMN1R4N3EyTlc3Tk14RdIBY0FVX3lxTE5fRFFmWWdzWkprMlNvbzEwRUwzSkFxcDduLXExTVViVl9XTTM4Tnl0NjhXeE1IUnVFSjdqWmh1RHowR0V2dXZIMnR3RC10MERVVHVYYmNMN1R4N3EyTlc3Tk14RQ?oc=5" target="_blank" rel="noopener noreferrer">US Stock Market Movement | Drone Military Technology Company Swarmer (SWMR.US) Debuts on US Stock Market, Opening Surge of 315.4% - Bitget</a>
+      </h3>
+      <p class='article-desc'>US Stock Market Movement | Drone Military Technology Company Swarmer (SWMR.US) Debuts on US Stock Market, Opening Surge of 315.4%&nbsp;&nbsp;Bitget</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Bitget</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiWkFVX3lxTE9mWXVWMmpRWUh6Rndkbl9rQnlFYzlMSVFHTkFvbUpIY2dIejFubzJLVl9ZLS1TTTZCc3pyaGV0ZW5fc211RnFJODRIajFFdUx0VUhOTWFsbjdPZw?oc=5" target="_blank" rel="noopener noreferrer">SWMR Should I Buy - Intellectia AI</a>
+      </h3>
+      <p class='article-desc'>SWMR Should I Buy&nbsp;&nbsp;Intellectia AI</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Intellectia AI</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMizAFBVV95cUxQN1c2UFFQRktFUXRPXzFUN0NrR0paNUhoNy1nTHZkeWdhTVg3Q3BIRlNvbjhPS2ltRWUwN3Z0TjlPVy0tWVJuRFBxZ19GUkFrTVAySVdEU3dsbzhfNzMzSG1yNk9pTzNzS3B2eERYaXdMdHVlM2NWSjVHc2xZRXRMOXozZ1hDUzlPNjZPdGJHNEhTd3lKWi15b0oya1VndW1pMGFKcEJSbjdfUjVTNFhtcDhTNzZJYXJGbEtoX0RydDVtN3JEb0VRSXpyQXE?oc=5" target="_blank" rel="noopener noreferrer">Drone-software company Swarmer surges 450% in IPO debut after opening at $12.50 - Investing.com</a>
+      </h3>
+      <p class='article-desc'>Drone-software company Swarmer surges 450% in IPO debut after opening at $12.50&nbsp;&nbsp;Investing.com</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Investing.com</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMilgFBVV95cUxPMENHVEFOcmxTYi1WRHlKSXNEVXpRcjhNcXBuUU9GeWF4aG80UkU3YWhLaTl2TWJxX1B3S3hRckg4WG8tTGkwN2lmb1JJb3p2SlFwWDVyN0NCUzVHRzhYZkxhM1RvWVNXRWxKN1l2ejZDU05GSXBTN05GdDloWlZqUnRiQUhJQmpTdkROX2tUcWlBSlFPVHc?oc=5" target="_blank" rel="noopener noreferrer">Defense tech company Swarmer goes public on Nasdaq after 100,000 combat missions - The Business Journals</a>
+      </h3>
+      <p class='article-desc'>Defense tech company Swarmer goes public on Nasdaq after 100,000 combat missions&nbsp;&nbsp;The Business Journals</p>
+      <div class="card-footer">
+        <span class="source-name">📰 The Business Journals</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 17, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiUEFVX3lxTFB3dXZJdy0tcUQwLW1rRHBoUnRsRnQ0eEFSeGlva3hUTWduTHNaMllrR29pTHFCT1VZOUJrY1A0ZjZmd3JBV3BwWU5KdkJNRjFS?oc=5" target="_blank" rel="noopener noreferrer">symbol__ Stock Quote Price and Forecast - CNN</a>
+      </h3>
+      <p class='article-desc'>symbol__ Stock Quote Price and Forecast&nbsp;&nbsp;CNN</p>
+      <div class="card-footer">
+        <span class="source-name">📰 CNN</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiwgFBVV95cUxQR2h1STF4SEtZSmM1N0IyS0dJVWxDaUpzSm5KNGtyTVI0a3FvRmhfU2tiaHEyVWFUT01pbUs2bHk4Um5UX1R3MlBzNTBMOVFNbC0yQzg1SmtXNXM1eElTX3gzOWxLckZ0bU80eV9vZks0RnNXeXFfaUhibTZZcE9aM1FZYzFzME9ScjZpWFAzUENBSnVGMzZEa0J6eVVFd1MwTTVxeVBUZkVTanIwV0x2RVlCdXBJUlBZQjQ0cUJsOWhKUQ?oc=5" target="_blank" rel="noopener noreferrer">Swarmer prices IPO at $5 per share, expects to raise $15 million - Investing.com</a>
+      </h3>
+      <p class='article-desc'>Swarmer prices IPO at $5 per share, expects to raise $15 million&nbsp;&nbsp;Investing.com</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Investing.com</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMinwFBVV95cUxPZVVpcUVZR3lfeU03Zkd2YmM2amt2eFVYbVR1VnEtbWw3VXY3U3UxYnNKaDhPbHFTbWo4T2wwMzFtLW1TTmY4eFdHR3VfNjJkRHRrd3FaRXlEQ204YUJLRXJOM2NrbGZFOXpCUXdVU1ZsR2tDSTRZRkw5SF9PLWhIeG5sQTR0dHMxOU1IX3kzTFZReWh5YXhnZnE2a21nM0U?oc=5" target="_blank" rel="noopener noreferrer">Drone software firm Swarmer prices $5 IPO to fund expansion - Stock Titan</a>
+      </h3>
+      <p class='article-desc'>Drone software firm Swarmer prices $5 IPO to fund expansion&nbsp;&nbsp;Stock Titan</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Stock Titan</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMid0FVX3lxTE1qY3locnlBOS1EMlZ6eFhJSmtKV295RjhEejNTRzhrM1B4ZS14TEhMX256a0ZvZ2NNbFJnUE0tV3RaVWdNMUZSNlhJX2VkNzBsQi1oczZsTVBReG9SSFExbDUxa2pyV0FuLXZROUFPMURtdUd4QU40?oc=5" target="_blank" rel="noopener noreferrer">SWARMER INC Financial Statements – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>SWARMER INC Financial Statements – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMidkFVX3lxTFBzZXE4WW04VU5RR1hTSGJ4RjVXaFdROVUzNkNDaWcyZ0IzSXJWNDJrVWQ1V0w5angzTFpaVXhfRVRKSmpfeGlSM0tWaVAyaGlmRURBdGlPX3ZGS3dTUEJuNU5OazFmQi1lWW5qbmdsZXJsMXJrekE?oc=5" target="_blank" rel="noopener noreferrer">SWARMER INC Revenue Breakdown – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>SWARMER INC Revenue Breakdown – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMijwFBVV95cUxObl93d0RRQ1BWejhveW1Dck9FVk9LcHdybURJMUZsMGJsb1JkYzBJZ2VOMUFZVVhKeXBqam1ybWF2ZTRydDdhNG8zOHVobzNEY1JVLUNvcWhQLWJ4Z0QzckdjUk1kRUQ5aHlEOGFjd0x1ZWd5X2NLY08xajRYWXZaS3RRTk90Qm1VQ05NazhoTQ?oc=5" target="_blank" rel="noopener noreferrer">Total equity of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Total equity of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMimwFBVV95cUxNTjR1T1BZYmZZUkhOYndQd2xjQ25WRXJJbDJVZW9WQVV4dnRUeU0yeXlBRUpNYmNyOUNQa1c3QUIteUU0V3ZSZklqTWtnSlc4N1Frc2w2VDl3b1pVcU5YYURqZ1VZeEkwaVJUNXB5d0E3NFByTnlQTFhPcm5hNnJadEZGVmJ2OXI0Q2dMU2xXMWJWRVIzY0hrdVN3cw?oc=5" target="_blank" rel="noopener noreferrer">EBITDA margin % of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>EBITDA margin % of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiqAFBVV95cUxOQWFkdTVTMkFvWXhoRUFDVHRBb1NEcERyeFlHaXozRUg5TUVKZFktOTFmNEZjMzVfaWtQR2xaVHV4SmRucWxzbi1ONDNrTTd3Z2t5UnF5MXJsT0ZVUDBOZmRDX0ROUUVpYlVQS1JURDRRVjJ6OGlCRS16eGw3NTFnTHBjdFdRY1AzTzJwQWM2MFk1OE9EcXdtbG4zdVJaZXVNMHpfTXlHVFY?oc=5" target="_blank" rel="noopener noreferrer">Enterprise value to EBITDA ratio of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Enterprise value to EBITDA ratio of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMirAFBVV95cUxNS25vcVctdUJ5N25wZWV5M1FtM2VmVW83LXZoNzMwVHRJeUVpNVA5eWNYQnlQZ2M5NS0tQWp0UDRqM0M3Vk02eDVPOEFHc2wzUDA4VlRrWEVWMEd4VDJrbWZLRGhrOHRJMzJpR1p5dE9JMEFTVlp5NkxaME9fZndnY2JDNW5kSWdwM0NlcG0wSDVBVk5PNzVKVU9jdnp6dTRfSktIcnNEMm5Hb1h5?oc=5" target="_blank" rel="noopener noreferrer">Return on invested capital % of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Return on invested capital % of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMimAFBVV95cUxOb0Z5d2dMVzR5N3FVZndyT0EydVQ4MEc2V0dST24xRWNDZlpQenhNV3puYmptUGpSWmxqekc1NnUyLVluRkZVeVo0VmhkcEtEUHcwTkV6Q3YtSy1xZzF0NllhM2JoWm1BYUE5WjRlXzE1WTB1RXhhMWxWekZROFdNREpMSFhFQkFjcFhIX1FNRUlBX3NOUkxUag?oc=5" target="_blank" rel="noopener noreferrer">Price to sales ratio of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Price to sales ratio of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMinwFBVV95cUxPMlBaNklBZnhKVjVQYWdyNkNUNzBTSHgweFQxc1FaZ04xLWtKN1Q0RjlOUGYzQ3dnYS1iX0RTUkItdXp2WGhCOThGREdVUi1nVHc0dTJxMUZDN2s3TktyNUxEc2drbXFlQVNKcFpJNlJ2b1oxYnk3S2REcE1mSklndnlYdU1nX1lEclBlQk8tam1BMzVpOXRIVndlZVdGVlU?oc=5" target="_blank" rel="noopener noreferrer">EBITDA per share of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>EBITDA per share of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMijAFBVV95cUxQUjJ1RXY0Tm5UaWwzcVZMSXJ0cERwcGdiZWNiU21iTUtPWHU0c2MtSVJ3VE44clJZbjItalZpZ2Q3VEw5V0stbWxBbExxMkE5eHUxeEI2S1JkRGpqZldHczM1QUZ3ZlFvSzFKUWNpMkhJWndCQWlLaWdLdVl2RzdfRWNOMXowU2k2QjJMNg?oc=5" target="_blank" rel="noopener noreferrer">Free cash flow of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Free cash flow of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMifkFVX3lxTE9YQ2NQUjJNeEhueDlKWFB5MVFmUl9CdDJMME9hcFFUQ0JoZnZVU3VqNnZnWEkxb2sxNDBRaFlOQWlaaU1mTkhSSmZINmpzdUFuNjRpanhvRnhDY2xmbl9EVjl2RnIxSGhHQ0ZjdHEtR0d5REk0WTVXNngxX2ktZw?oc=5" target="_blank" rel="noopener noreferrer">SWARMER INC Balance Sheet – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>SWARMER INC Balance Sheet – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiiAFBVV95cUxOUVJzTm5OcEg1MXREVFZRS0FROEQ4ZmJ1cGlyOVlZNWc2OU5rcWRXY3FlTnlyUnJyc2oxMkY0YkNTZGVwdjFMNTZQRU5OeDZQZDFwLXVwSFNveWxtMmREX0s4cVZXVUg5QjVYSk9YeU9qNmJCcF9pTUtELW1aMmlfZHNGbC1jX3lG?oc=5" target="_blank" rel="noopener noreferrer">SWMR Statistics – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>SWMR Statistics – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMieEFVX3lxTFBNSWtNMkZrb0RudDIwSDNrWDRuN0IxeXNXUUZ4dV92T1FIbzBab3dvV2FOa0ctbExLamZ1enpxY01wbnNQMzgtQ3hSTEdYSDBwS2h4SFBkbWdpc3dTZV9raExNQ19yeW9uTlE2djVpVDNDZURUSFhTcQ?oc=5" target="_blank" rel="noopener noreferrer">SWARMER INC Cash Flow – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>SWARMER INC Cash Flow – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiUEFVX3lxTFBXLWZVcVJyWlJBa1Z0WktFVXI5aHV2TEJXMUVxR3RpUVNfQmZ6Rjd2UTZvcGtzbThNTkxYUkcyQjhzbjZzR1FETExKLVJhN2Jj?oc=5" target="_blank" rel="noopener noreferrer">“Survival instinct in machines”. Ukrainian startup BaBayte, which creates AI modules for drones, has attracted investment from Green Flag Ventures - dev.ua</a>
+      </h3>
+      <p class='article-desc'>“Survival instinct in machines”. Ukrainian startup BaBayte, which creates AI modules for drones, has attracted investment from Green Flag Ventures&nbsp;&nbsp;dev.ua</p>
+      <div class="card-footer">
+        <span class="source-name">📰 dev.ua</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMinwFBVV95cUxOQ0hVTWpMTlVXVUhzYnREc1dPYzhBV0RiZU55b2lpbTlZWkxxaVFHQlpFN1RValNuQ0hud0J6RWhoVnFOSGhPc1pxNjFVQkFZcTdDRTRmM0plNUs2WXNQMXJDTThXdVdnNGhITmVCWXpvWDlHWlF4R256WjgtcUk2SXIyVUQzZnY0cVZJWXFlVVFvX1BJRDRkTUxaZnVTeVU?oc=5" target="_blank" rel="noopener noreferrer">Non-operating income (total) of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Non-operating income (total) of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiiAFBVV95cUxPMjNsN2pQOE45a3U5MURadG5SbHRrcHdWRXhPNmw4NE4wRmpYQ21xME5xeXBaNnd6WE5jbW5oS2J5bXN1R0ZsdnpzRDh2RzlNQ2tOMEtrVEF1RmZHakp0VktCSlNjaUVNcGpIYUdZRFlaUnhzN2d3UXNjWTdISDdwa2N2S1VwYTBS?oc=5" target="_blank" rel="noopener noreferrer">EBIT of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>EBIT of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMimwFBVV95cUxNNll3cnNRbS1vZkk5N3FmeHJIMy0yeVo3RThTSDl5aEV0VG5uVV9naDJjcXNxTXl2N0JWcnEtRHlpTXNrSUp6bFFITUpjRVZpVGVzcVl4NGRzbDY4S1NBdVd0T0hyUDhQYzh3TjhJQ1RlcjhVa09HdDF3cy1TNEcxSHNmZVA4WUs5aFNTTWxuQ2FfRHk5U2NlMU90UQ?oc=5" target="_blank" rel="noopener noreferrer">Operating expenses (excl. COGS) of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Operating expenses (excl. COGS) of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMikAFBVV95cUxPOGlFOWpzbHdVdDBTalFoME5HZXJZek1Cd1N6QS1lR3NnSDNkYjVxemFMc2FvckU4TUozTHFtUTFzNHBNVnk5RTJMc3dta3RBMm5VbVBOSGJITzIyVlVXNXZkVlFUc0xKN2YtNm9mYWJxVUdzeHNtTkExMXZsSFlhY0Q1OUZJd3hJTm5IXzF4VXY?oc=5" target="_blank" rel="noopener noreferrer">Taxes of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Taxes of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMinwFBVV95cUxOb2pxMGgtb2hfOXNsTEVQOGsxdVFsdXNDYTBzVEpRZ212dzRNWVFLbDFzakduN2F3TFk2OWltbWhteEtzS21va1NDU3FzbjF1VldkWWhwQzl5U2hBbTdGaHJmRkUzRmtfWi1qZGNEVFdzZXllU2RvVlFvVVZGOGNiUFpzZVltc3JUaUNCNWFPY1VhWVVJZktKV3FhYWQ4RVU?oc=5" target="_blank" rel="noopener noreferrer">Non-controlling/minority interest of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Non-controlling/minority interest of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiggFBVV95cUxPdU9sU1NaZGxYSWY2aEprUFhyb0pvY2RQclp6R2trVE5CbGVFSkw0NnkwXzc1Y0w3VGdwaE5qU3lsdmZlcGFFM19vTFVCUEx6VVU0cXJKQjduNEROZm1KREFDcXQxZjFrcXMwcTlXWkNZNTJ1d084bzBwQ2NJOFBCTlJB?oc=5" target="_blank" rel="noopener noreferrer">SWMR Income Statement – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>SWMR Income Statement – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMikAFBVV95cUxQZXAwaGR3b3pNOW9FT3V4eUpPcGpVeTJIZUMtMWl4VVJGWDRCd0owV3Eyc3IwRFpFMFF1ZFFWRGc0RHNNUjZiUUt3SDFLXzQ2MXd0ci1LRF8zZ2pYMHUtN05RVURtMVVtY1F6SkkxYWVQei1lUlVMMmNOMGJVRjZhekNaVkI1Tm9oVXE1czkydms?oc=5" target="_blank" rel="noopener noreferrer">Net income of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Net income of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiowFBVV95cUxNcTVMZjdGeGRSQ0J1RFFFVlRqZ1RQSlVYZkx2cXNXREJWVGw5SFRoYW0tN19qaXd3akxmNW1wOFRmYS16eGx6Tkd3MzMyVG5uMkFtSnJVYW5HaEQwTTg1Rld0dHU4Q2E5ZTZSMGhteUJ4TzdrWHFUUWFFcU5ncHIyX05NWTZWMHBpdldNVFdDRGVFUGF5dzVBSG52MjlEcDlWalFV?oc=5" target="_blank" rel="noopener noreferrer">Basic earnings per share (basic EPS) of Swarmer Inc. – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Basic earnings per share (basic EPS) of Swarmer Inc. – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Mar 16, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiqgFBVV95cUxOcHdIbXZmc1FvY2xqeU04bWVsampSRGU1UWkxdS1TcnByQzRvaldRWGxFUjl3WHFPejZRSTNvTTY4UjdhaVNvNUdabGdIVVhUazhDN2lETnlwRnBLNTNqM1J4SUd0WjZQWTVqbkNnRE44clVpWG9jbXRwOEF3dUZaWXVkQ0FudzE1WkJOZEdobjlPdXEwUzlFWVJuMXRWUnpvakF5NjVFcVFLQQ?oc=5" target="_blank" rel="noopener noreferrer">Free float of SWMR – NASDAQ:SWMR - TradingView</a>
+      </h3>
+      <p class='article-desc'>Free float of SWMR – NASDAQ:SWMR&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Mar 13, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMixgFBVV95cUxQUEhIemJpLWEwM2QzaGctWW9XYVZYV2tjdW9Vd2RJbk5qaXB4ZWFWcGdiTDlENXZrYkdlSnZ6bHU5WXNkNkZKT0xULXRFSUNlYU1vQ3RGOG5HVWdNNVk3SGdyNjdCbklpLXdkaFdJaU05Rmw0aXR5V2dsYklBemNlbEtETzIzWXZKa0RxZVBvWEJhanBmTkRWRHMyR2o5cUxURHo3a0xpSjVWSWo4bHdlRkRvQjBreWxFckkxRUZqTUdTcmZJV1E?oc=5" target="_blank" rel="noopener noreferrer">Ukrainian-Estonian Startup BaBayte Secures Investment from U.S. Fund Green Flag Ventures - Inventure.com.ua</a>
+      </h3>
+      <p class='article-desc'>Ukrainian-Estonian Startup BaBayte Secures Investment from U.S. Fund Green Flag Ventures&nbsp;&nbsp;Inventure.com.ua</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Inventure.com.ua</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Feb 24, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMigwFBVV95cUxOSE42RmcwZVJ6Snp5NVVVc3R4bGl0WUw3cXVWNzVIdGZVQWctbUNtNUZyaG1KSTRKMlpuQ2VuX01SSG1wNkNhM0FDTXNiRHQ0Zjd6YXpGWlNzd3Q4Nk1QNVZkNUFXSlNHdW1fVmNKOXZKTl9CUWllVTN2Tkw0ZldxcGF4SQ?oc=5" target="_blank" rel="noopener noreferrer">Flying High with Erik Prince: Swarmer IPO Brings Combat-Tested Tech To Public Markets – Initiation Report - Yahoo Finance</a>
+      </h3>
+      <p class='article-desc'>Flying High with Erik Prince: Swarmer IPO Brings Combat-Tested Tech To Public Markets – Initiation Report&nbsp;&nbsp;Yahoo Finance</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Yahoo Finance</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Feb 24, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiogFBVV95cUxPSUI5MkNXczVCRC11V0gxbVdCeHZtaHd6MFVndFVSNG5aU2xhRXludHMycGtyTlFhaUZRTHM3RkhVVzNuNjFNcFFqbE5HLXVMcWcxOUNwdnQtNDlSUFpfSlVTZUVRck5VOXZvOTk5T1k0dF8yUEZnQ3h5Y1hEZmI3OHF1MVROakkwQ3g1ZjJCRk1tUFRXTXdPV1FSSWVTeFdhMEE?oc=5" target="_blank" rel="noopener noreferrer">Swarmer Targets $15 Million IPO On Little Revenue, High Risks (SWMR) - Seeking Alpha</a>
+      </h3>
+      <p class='article-desc'>Swarmer Targets $15 Million IPO On Little Revenue, High Risks (SWMR)&nbsp;&nbsp;Seeking Alpha</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Seeking Alpha</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Feb 23, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiS0FVX3lxTE05UXhEWUl0N2pRM3lzY3pxcWs4a1JIdFdFQWJsSTY1eFdTTlZLdE43RHFxWWMwdVVoUWZydU9fYnNQTFZfVlRsVTlibw?oc=5" target="_blank" rel="noopener noreferrer">US-based Fund Invests in Ukrainian Anti-Drone Solutions Developer MaXon - Kyiv Post</a>
+      </h3>
+      <p class='article-desc'>US-based Fund Invests in Ukrainian Anti-Drone Solutions Developer MaXon&nbsp;&nbsp;Kyiv Post</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Kyiv Post</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Feb 20, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMisAFBVV95cUxNZU5Udl9KX2dERnc2cnhwczZWZmwtTENKSUEyYncxMWxHSlVoX3F4YXpyMWRwckRmZ01NSlBiaEdOR3ZSQlRwVk5rYWhURGtBaS1HME8wZmJidUtveGgwUmNXRGVING9VaDhXVERoSkFWMmRVdEJTeS1VVmhZa0VKeHo3dnQtRDNNRDdXaHVjclFqYUd0R1NCMVo5aTZhU01IRWZua190OGotcHZkUTNXbA?oc=5" target="_blank" rel="noopener noreferrer">Ukrainian Deftech Startup MaXon Secures Investment from Green Flag Ventures - Scroll.media</a>
+      </h3>
+      <p class='article-desc'>Ukrainian Deftech Startup MaXon Secures Investment from Green Flag Ventures&nbsp;&nbsp;Scroll.media</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Scroll.media</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Feb 3, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMipAFBVV95cUxQaDFNcHZfZ0xOdS1DbGNEaXlyWDhqUXY2bnpXUGJGMUdhdENLMkFKNVQ5NE9waEtMaXFMeUNXRllrRE8zZlhfVUxFTTJsTHJSVFlJUVRhOW11UHd6QjFCNHpfRlpaeW01YjljWDl0RjMzUDhnSXRuQ0d2N3poaFVuQUZ3YXQxTGhNRml2UXNlYWJ0RS16aDlDTWF0Wk82d1ljb3diSg?oc=5" target="_blank" rel="noopener noreferrer">Drone swarming software company with Ukraine battlefield experience moves toward IPO - The Business Journals</a>
+      </h3>
+      <p class='article-desc'>Drone swarming software company with Ukraine battlefield experience moves toward IPO&nbsp;&nbsp;The Business Journals</p>
+      <div class="card-footer">
+        <span class="source-name">📰 The Business Journals</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Feb 2, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMif0FVX3lxTE9oV0JkaVVQZWRKN21OcXJOWmx5aDNHZGFGVEZLWFEtUXNoSWQ2TzV1RjZHRTNLUjNYejJ6dFRHR3c0dHBFUGdQQkFaRmRiT1hQLXJCWUhpUS1YeWVZandmZkJreXdwblZmWTROV2pTaF9ITjNVYmlFSEZoa1lQSDQ?oc=5" target="_blank" rel="noopener noreferrer">Erik Prince Files for IPO with Battle-Tested AI Drone Company Swarmer - Yahoo Finance</a>
+      </h3>
+      <p class='article-desc'>Erik Prince Files for IPO with Battle-Tested AI Drone Company Swarmer&nbsp;&nbsp;Yahoo Finance</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Yahoo Finance</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Feb 2, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiwwFBVV95cUxOQVNwLUFzQjdRdHYxQ3NlZUxNZVhRRHZFdkdINVZXZENtZkFsQnRYTGtYYWowcXVkY0UxTUJRSG9oUzhFS2otZ2Q5T0U5SU1paEI5cHVmLTEyMDJEeUdyMERYU3hYZFZTZGpYb1FSS296MDM3Mkt5dkZOZzJtdXdGOHNSaVE1Y3VXVmdHbG5ZbnlfdjVicDdKVTd3eDd6aWlqV3ExdnVzZmc1UXFqSEozaTVuWWN6NmEzOHBselVFOHdDMU0?oc=5" target="_blank" rel="noopener noreferrer">Swarmer Inc - Lucid Capital Markets Is Underwriter To IPO - TradingView</a>
+      </h3>
+      <p class='article-desc'>Swarmer Inc - Lucid Capital Markets Is Underwriter To IPO&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Swarmer Inc">
+      <div class="card-header">
+        <span class="badge" style="background:#fee2e2;color:#991b1b">Swarmer Inc</span>
+        <span class="pub-date">Feb 2, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMi_wFBVV95cUxOSVJjS0VEUzM2aXZRRklucnZPMWt4SnJJQ0kzNHRFNXQ1TkFZMDA1d05yNW1ZWjFDam1xbXJQSWpnd21HQkE4dFg5TVdtUUIzYXVlT2QtTVVDTmpPeUZyalpBcERHbUZUdmV1MEdOQWk4MkZUOWt3Wk5JOTlKRlFnOWlSUmp6MEJGME40VVdIUkJtcmNCT1BUcHNfcnpqWXBlOTBMTENIbE9IY0hCWjVsOFpBZGh0UnpNbW5sbnZ5dGdubUQ4a2RCck1MTTNaWWNLQXF3cEFNUjZwQy1YVEZ1bmwxU2ZqOVVkd3pEQlhnUmZEUFdKcDNVU045U3Y1bjA?oc=5" target="_blank" rel="noopener noreferrer">Swarmer, Software Platform for Autonomous Drone Swarms and Battlefield AI, Files for Nasdaq Capital Market IPO - TradingView</a>
+      </h3>
+      <p class='article-desc'>Swarmer, Software Platform for Autonomous Drone Swarms and Battlefield AI, Files for Nasdaq Capital Market IPO&nbsp;&nbsp;TradingView</p>
+      <div class="card-footer">
+        <span class="source-name">📰 TradingView</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="SWMR">
+      <div class="card-header">
+        <span class="badge" style="background:#ffedd5;color:#9a3412">SWMR</span>
+        <span class="pub-date">Feb 2, 2026</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMivAFBVV95cUxNRXNSNl9fWTFDMGY5U3ZHVjIycnpEcDBxejE1emtHVjMtVkEzWHNWN2ZKWWpKZ1htUTJCM2p5Sm9QQjRfbHZFdHExY2JzTjVVMWdtQmluTFRndjNWSmF3TVRoZWFpUXY4OHp1WkpXRk1VMjFTMzNmbThRTGpXQ1E0M2s3d2oycXBEb2NmYVM3WXJXZC1aaTRfeVc4NHgzLXZuUFB1TmxrZTRuMkJScXYzMUVVOURjXzQ5MEVqUA?oc=5" target="_blank" rel="noopener noreferrer">Swarmer files for IPO to list on Nasdaq under ticker SWMR - Investing.com</a>
+      </h3>
+      <p class='article-desc'>Swarmer files for IPO to list on Nasdaq under ticker SWMR&nbsp;&nbsp;Investing.com</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Investing.com</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Dec 18, 2025</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMigAFBVV95cUxPU0phT3VQZ19qczhoQTE2TzUzX0Fsa1EyRXpfT05CQUNySHlELWJtR3dnTUFLeUc3Szk5ZU1PeUFVN2p1SEw1MEo0Wms3NFRtYWZqSXFucWpWR3Jna1J6cnVMM0JsMXdHclV1MUNHcnBWYlIyZjBBaGdaeU9sc1Q4aQ?oc=5" target="_blank" rel="noopener noreferrer">HIMERA Raises $2.5 Million in Seed Round - Scroll.media</a>
+      </h3>
+      <p class='article-desc'>HIMERA Raises $2.5 Million in Seed Round&nbsp;&nbsp;Scroll.media</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Scroll.media</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Dec 17, 2025</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiwAFBVV95cUxPcS1BZnNJcnFGd0RCdHdkSUNaS3pDd1l6SThqTGJCZkFBVEo4QURoZFRpRTZtejBpbzhLTzJCRlVZeGs5M1NVUE41ZmxBTEhjVGJKQklHUlMwN2NKcTQ2RFFmYkVwY19fd2NGV1pVeUpkWmlNNFVqV3VLak0xeEZNODl5NjRMSm5Hc2FHVDhBN3hJNW13SVlnaHo1QVhsaElWZWM3UnpmR21VZ2J0Qk1vcUU3ak5NZFY2WHdYT1E1V3I?oc=5" target="_blank" rel="noopener noreferrer">Why Global Investors Are Pouring Millions Into Ukraine’s Combat-Tested Defense Tech - UNITED24 Media</a>
+      </h3>
+      <p class='article-desc'>Why Global Investors Are Pouring Millions Into Ukraine’s Combat-Tested Defense Tech&nbsp;&nbsp;UNITED24 Media</p>
+      <div class="card-footer">
+        <span class="source-name">📰 UNITED24 Media</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Nov 19, 2025</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMipgFBVV95cUxQaUhEbHpyT2tDM1MxbWdNUjI1aUpaNWYtNlpnSFlzVi1RSGFrX1ROaEpNeF9pRklUMTNHUkIweHlyRTRzdW5lUVYzaFF1cTUwX3Z1WnpxQ0xlMm5MdXJxSDFrcm1rRFlkTHViWmdicXJDYlM1RU92WHlnVkYzYVZ2UDJQd2hiRG42T3RTLWtuemhtRzFlbTkwS21wQ1k3aV9lMnc5Rmh3?oc=5" target="_blank" rel="noopener noreferrer">How Ukraine’s Technologists and Artists are Rewriting the Country’s Future - International Policy Digest</a>
+      </h3>
+      <p class='article-desc'>How Ukraine’s Technologists and Artists are Rewriting the Country’s Future&nbsp;&nbsp;International Policy Digest</p>
+      <div class="card-footer">
+        <span class="source-name">📰 International Policy Digest</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Nov 9, 2025</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMidkFVX3lxTFAyNl9pZVhxUkZiYmRyYzFEN3E2b1I1SkxDa2ViZmk3N1pUWjQ4Z0tWNlBtV3hEUGY5M3hXU2JnSVhCZFlpQWF1Nkc4N0YwZjZmamRxeTJkS2YyOEsxZmYtZnRmNWFvLXk0Tnh1bHFaVng3dFdYSUE?oc=5" target="_blank" rel="noopener noreferrer">Texas Weekly Deal Highlights - Texas CEO Magazine</a>
+      </h3>
+      <p class='article-desc'>Texas Weekly Deal Highlights&nbsp;&nbsp;Texas CEO Magazine</p>
+      <div class="card-footer">
+        <span class="source-name">📰 Texas CEO Magazine</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Nov 2, 2025</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMilwFBVV95cUxNMEtFbG9QUU9Wdk9XMTM1NGVaU3Zyb1Z4c214dFc3WC00c1VjWHNwckliQ0duSWF4NU5TRVpoYjlyZ1h5N0d6STlCTUwwWXVFUnlJNTYwWFZyZnBwVFdXMVNveFFCZm1yZERhV0lzUVZHemM1UXphTXI3cDFUbkQxUG5QT201LTRacGVmbUpGWW5YS0RVbUtn?oc=5" target="_blank" rel="noopener noreferrer">Made in Ukraine: WSJ reveals how drone makers attract millions from the West - RBC-Ukraine</a>
+      </h3>
+      <p class='article-desc'>Made in Ukraine: WSJ reveals how drone makers attract millions from the West&nbsp;&nbsp;RBC-Ukraine</p>
+      <div class="card-footer">
+        <span class="source-name">📰 RBC-Ukraine</span>
+      </div>
+    </div>
+
+    <div class="article-card" data-keyword="Green Flag Ventures">
+      <div class="card-header">
+        <span class="badge" style="background:#d1fae5;color:#065f46">Green Flag Ventures</span>
+        <span class="pub-date">Oct 15, 2025</span>
+      </div>
+      <h3 class="article-title">
+        <a href="https://news.google.com/rss/articles/CBMiakFVX3lxTE1qQWYwc3V3cWhURzROY0N0eTBpUWxGZlh1RXd5YUNKTGJaX1NzTTdtMFM4WmZ1LVlpZm1ZbG9VQ2F4STItZmV1YVR2TlA0UzFyMWxrcmlvcERxX1NieVpqMUxwNTlLTldkNWc?oc=5" target="_blank" rel="noopener noreferrer">This fund is helping Ukrainian dual-use startups go global: interview with Green Flag Ventures co-founder Justin Zeefe - thedefender.media</a>
+      </h3>
+      <p class='article-desc'>This fund is helping Ukrainian dual-use startups go global: interview with Green Flag Ventures co-founder Justin Zeefe&nbsp;&nbsp;thedefender.media</p>
+      <div class="card-footer">
+        <span class="source-name">📰 thedefender.media</span>
+      </div>
+    </div>
+</div>
+
+<script>
+  function filterBy(keyword, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    document.querySelectorAll('.article-card').forEach(card => {
+      if (keyword === 'all' || card.dataset.keyword === keyword) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
